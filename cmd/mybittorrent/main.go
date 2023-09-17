@@ -80,26 +80,22 @@ func decodeBencodeDictionary(bencodedString string) (interface{}, int, error) {
 	var decodedDictionary map[string]interface{} = make(map[string]interface{})
 	var dictionaryLen int = len(bencodedString)
 
+	// fmt.Println("To decode dictionary=", bencodedPayload)
+
 	// Remove the first (d) and last character (e)
 	bencodedPayload := bencodedString[1 : dictionaryLen-1]
 
 	for len(bencodedPayload) > 0 {
-
-		fmt.Println("To decode=", bencodedPayload)
 
 		decodedKey, keyEnd, err := decodeBencode(bencodedPayload)
 		if err != nil {
 			return "", -1, err
 		}
 
-		fmt.Println("Decoded key=", decodedKey, "keyEnd=", keyEnd)
-
 		decodedValue, valueEnd, err := decodeBencode(bencodedPayload[keyEnd:])
 		if err != nil {
 			return "", -1, err
 		}
-
-		fmt.Println("Decoded value=", decodedValue, "valueEnd=", valueEnd)
 
 		decodedDictionary[decodedKey.(string)] = decodedValue
 		bencodedPayload = bencodedPayload[keyEnd+valueEnd:]

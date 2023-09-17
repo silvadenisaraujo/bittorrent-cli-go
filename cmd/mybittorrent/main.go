@@ -49,7 +49,7 @@ func decodeBencodeInteger(bencodedString string) (interface{}, int, error) {
 
 // Decodes a Bencode list
 func decodeBencodeList(bencodedString string) (interface{}, int, error) {
-	var decodedList []interface{}
+	var decodedList []interface{} = make([]interface{}, 0)
 	// Remove the first (l) and last character (e)
 	bencodedPayload := bencodedString[1 : len(bencodedString)-1]
 

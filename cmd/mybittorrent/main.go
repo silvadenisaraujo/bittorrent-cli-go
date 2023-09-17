@@ -34,6 +34,7 @@ func decodeBencodeInteger(bencodedString string) (interface{}, int, error) {
 	for i := 1; i < bencodedStringLen; i++ {
 		if bencodedString[i] == 'e' {
 			integerLen = i
+			break
 		}
 	}
 
@@ -50,19 +51,21 @@ func decodeBencodeInteger(bencodedString string) (interface{}, int, error) {
 // Decodes a Bencode list
 func decodeBencodeList(bencodedString string) (interface{}, int, error) {
 	var decodedList []interface{} = make([]interface{}, 0)
+	var listLen int = len(bencodedString)
+
 	// Remove the first (l) and last character (e)
-	bencodedPayload := bencodedString[1 : len(bencodedString)-1]
+	bencodedPayload := bencodedString[1 : listLen-1]
 
 	for len(bencodedPayload) > 0 {
 		decoded, end, err := decodeBencode(bencodedPayload)
 		if err != nil {
 			return "", -1, err
 		}
-		bencodedPayload = bencodedPayload[end:]
 		decodedList = append(decodedList, decoded)
+		bencodedPayload = bencodedPayload[end:]
 	}
 
-	return decodedList, -1, nil
+	return decodedList, listLen, nil
 }
 
 // Example:

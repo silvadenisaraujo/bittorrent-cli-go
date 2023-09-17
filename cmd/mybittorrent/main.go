@@ -135,6 +135,43 @@ func main() {
 
 		jsonOutput, _ := json.Marshal(decoded)
 		fmt.Println(string(jsonOutput))
+	} else if command == "info" {
+
+		torrentFile := os.Args[2]
+
+		// Open the torrent file
+		file, err := os.Open(torrentFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Read the torrent file
+		fileInfo, err := file.Stat()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Read the torrent file
+		fileContent := make([]byte, fileInfo.Size())
+		_, err = file.Read(fileContent)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Decode the torrent file
+		decoded, _, err := decodeBencodeDictionary(string(fileContent))
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Print the tracker URL and the file length
+		fmt.Println("Tracker URL:", decoded.(map[string]interface{})["announce"])
+		fmt.Println("Length:", decoded.(map[string]interface{})["info"].(map[string]interface{})["length"])
+
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)

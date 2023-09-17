@@ -72,16 +72,14 @@ func decodeBencodeList(bencodedString string) (interface{}, int, error) {
 // - 5:hello -> hello
 // - 10:hello12345 -> hello12345
 func decodeBencode(bencodedString string) (interface{}, int, error) {
-	bencodedStringLen := len(bencodedString)
-
 	if unicode.IsDigit(rune(bencodedString[0])) {
 		return decodeBencodeString(bencodedString)
-	} else if bencodedString[0] == 'i' && bencodedString[bencodedStringLen-1] == 'e' {
+	} else if bencodedString[0] == 'i' {
 		return decodeBencodeInteger(bencodedString)
 	} else if bencodedString[0] == 'l' {
 		return decodeBencodeList(bencodedString)
 	} else {
-		return "", -1, fmt.Errorf("Pattern not recognized")
+		return "", -1, fmt.Errorf("Pattern not recognized %s", bencodedString)
 	}
 }
 

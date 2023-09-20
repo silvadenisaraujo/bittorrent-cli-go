@@ -59,7 +59,8 @@ func main() {
 		var length int = decoded.(map[string]interface{})["info"].(map[string]interface{})["length"].(int)
 
 		// Encodes the info
-		encodedInfo, err := encodeBencode(decoded.(map[string]interface{})["info"].(map[string]interface{}))
+		info := decoded.(map[string]interface{})["info"].(map[string]interface{})
+		encodedInfo, err := encodeBencode(info)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -74,6 +75,18 @@ func main() {
 		fmt.Println("Tracker URL:", trackerURL)
 		fmt.Println("Length:", length)
 		fmt.Printf("Info Hash: %x\n", infoHash)
+
+		// Print the pieces
+		fmt.Printf("Piece Length: %d\n", info["piece length"].(int))
+		fmt.Println("Piece Hashes:")
+		pieces, ok := info["pieces"].(string)
+		if !ok {
+			fmt.Println("Could not decode pieces")
+			return
+		}
+		for i := 0; i < len(pieces); i += 20 {
+			fmt.Printf("%x\n", pieces[i:i+20])
+		}
 
 	} else {
 		fmt.Println("Unknown command: " + command)

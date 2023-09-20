@@ -72,9 +72,9 @@ func main() {
 		infoHash := hex.EncodeToString(sha.Sum(nil))
 
 		// Print the tracker URL and the file length
-		fmt.Println("Tracker URL:", trackerURL)
-		fmt.Println("Length:", length)
-		fmt.Println("Info Hash:", infoHash)
+		fmt.Printf("Tracker URL: %s\n", trackerURL)
+		fmt.Printf("Length: %d\n", length)
+		fmt.Printf("Info Hash: %s\n", infoHash)
 
 	} else {
 		fmt.Println("Unknown command: " + command)

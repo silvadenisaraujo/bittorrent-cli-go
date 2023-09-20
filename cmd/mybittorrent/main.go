@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -69,12 +68,12 @@ func main() {
 		// Hash the info
 		sha := sha1.New()
 		sha.Write([]byte(encodedInfo))
-		infoHash := hex.EncodeToString(sha.Sum(nil))
+		infoHash := sha.Sum(nil)
 
 		// Print the tracker URL and the file length
-		fmt.Printf("Tracker URL: %s\n", trackerURL)
-		fmt.Printf("Length: %d\n", length)
-		fmt.Printf("Info Hash: %s\n", infoHash)
+		fmt.Println("Tracker URL:", trackerURL)
+		fmt.Println("Length:", length)
+		fmt.Printf("Info Hash: %x\n", infoHash)
 
 	} else {
 		fmt.Println("Unknown command: " + command)

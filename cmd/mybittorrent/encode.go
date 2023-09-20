@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 )
 
@@ -37,13 +38,23 @@ func encodeBencodeDictionary(value interface{}) (string, error) {
 	var encodedDictionary string = "d"
 	var err error
 
-	for key, value := range value.(map[string]interface{}) {
+	// Sort the keys to guarantee the same hash
+	var keys []string
+	for key := range value.(map[string]interface{}) {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
 
+	for _, key := range keys {
+
+		// Encode the key
 		encodedKey, err := encodeBencode(key)
 		if err != nil {
 			return "", err
 		}
 
+		// Encode the value
+		value := value.(map[string]interface{})[key]
 		encodedValue, err := encodeBencode(value)
 		if err != nil {
 			return "", err

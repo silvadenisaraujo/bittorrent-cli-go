@@ -24,43 +24,14 @@ func main() {
 	} else if command == "info" {
 
 		torrentFile := os.Args[2]
-
-		// Open the torrent file
-		file, err := os.Open(torrentFile)
+		torrent, err := parse_file(torrentFile)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-
-		// Read the torrent file
-		fileInfo, err := file.Stat()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		// Read the torrent file
-		fileContent := make([]byte, fileInfo.Size())
-		_, err = file.Read(fileContent)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		// Decode the torrent file
-		decoded, _, err := decodeBencodeDictionary(string(fileContent))
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		// Get the tracker URL and the file length
-		var trackerURL string = decoded.(map[string]interface{})["announce"].(string)
-		var length int = decoded.(map[string]interface{})["info"].(map[string]interface{})["length"].(int)
 
 		// Encodes the info
-		info := decoded.(map[string]interface{})["info"].(map[string]interface{})
-		encodedInfo, err := encodeBencode(info)
+		encodedInfo, err := encodeBencode(torrent.Info)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -72,20 +43,43 @@ func main() {
 		infoHash := sha.Sum(nil)
 
 		// Print the tracker URL and the file length
-		fmt.Println("Tracker URL:", trackerURL)
-		fmt.Println("Length:", length)
+		fmt.Println("Tracker URL:", torrent.Announce)
+		fmt.Println("Length:", torrent.Info["length"].(int))
 		fmt.Printf("Info Hash: %x\n", infoHash)
 
 		// Print the pieces
-		fmt.Printf("Piece Length: %d\n", info["piece length"].(int))
+		fmt.Printf("Piece Length: %d\n", torrent.Info["piece length"].(int))
 		fmt.Println("Piece Hashes:")
-		pieces, ok := info["pieces"].(string)
-		if !ok {
-			fmt.Println("Could not decode pieces")
-			return
-		}
+		pieces := torrent.Info["pieces"].(string)
 		for i := 0; i < len(pieces); i += 20 {
 			fmt.Printf("%x\n", pieces[i:i+20])
+		}
+	} else if command == "peers" {
+
+		torrentFile := os.Args[2]
+		torrent, err := parse_file(torrentFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Get the peer ID
+		peerId, err := generatePeerId()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Do HTTP GET request to the tracker
+		peers, err := getPeers(torrent, peerId)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Print the peers
+		for _, peer := range peers {
+			fmt.Printf("%s:%d\n", peer.Ip, peer.Port)
 		}
 
 	} else {

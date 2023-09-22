@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"sort"
 	"strconv"
@@ -86,4 +87,17 @@ func encodeBencode(value interface{}) (string, error) {
 	default:
 		return "", fmt.Errorf("Type not recognized %T", value)
 	}
+}
+
+// Hashes the info dictionary
+func hashInfo(torrent *TorrentFile) ([]byte, error) {
+	encodedInfo, err := encodeBencode(torrent.Info)
+	if err != nil {
+		return nil, err
+	}
+
+	sha := sha1.New()
+	sha.Write([]byte(encodedInfo))
+	infoHash := sha.Sum(nil)
+	return infoHash, nil
 }

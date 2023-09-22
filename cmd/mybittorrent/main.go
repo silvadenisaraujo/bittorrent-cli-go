@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -30,17 +29,12 @@ func main() {
 			return
 		}
 
-		// Encodes the info
-		encodedInfo, err := encodeBencode(torrent.Info)
+		// Encodes and hash the info
+		infoHash, err := hashInfo(torrent)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-
-		// Hash the info
-		sha := sha1.New()
-		sha.Write([]byte(encodedInfo))
-		infoHash := sha.Sum(nil)
 
 		// Print the tracker URL and the file length
 		fmt.Println("Tracker URL:", torrent.Announce)
@@ -55,7 +49,6 @@ func main() {
 			fmt.Printf("%x\n", pieces[i:i+20])
 		}
 	} else if command == "peers" {
-
 		torrentFile := os.Args[2]
 		torrent, err := parse_file(torrentFile)
 		if err != nil {
@@ -81,6 +74,37 @@ func main() {
 		for _, peer := range peers {
 			fmt.Printf("%s:%d\n", peer.Ip, peer.Port)
 		}
+	} else if command == "handshake" {
+		torrentFile := os.Args[2]
+		torrent, err := parse_file(torrentFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Get the peer ID
+		peerStr := os.Args[3]
+		peer, err := parsePeer(peerStr)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Get the local peer ID
+		localPeerId, err := generatePeerId()
+
+		// Encodes and hash the info
+		infoHash, err := hashInfo(torrent)
+
+		// Do the handshake
+		handshakePeer, err := handshakePeer(peer, localPeerId, infoHash)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Print the handshake
+		fmt.Println("Peer ID:", handshakePeer)
 
 	} else {
 		fmt.Println("Unknown command: " + command)

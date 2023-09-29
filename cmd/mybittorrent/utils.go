@@ -12,10 +12,8 @@ type TorrentFile struct {
 }
 
 func parse_file(filepath string) (*TorrentFile, error) {
-	torrentFile := os.Args[2]
-
 	// Open the torrent file
-	file, err := os.Open(torrentFile)
+	file, err := os.Open(filepath)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err

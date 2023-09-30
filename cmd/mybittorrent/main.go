@@ -252,7 +252,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 
 		// Create the request message.
 		requestMessage := make([]byte, 12)
-		binary.BigEndian.PutUint32(requestMessage[0:4], uint32(i))
+		binary.BigEndian.PutUint32(requestMessage[0:4], uint32(pieceIndex))
 		binary.BigEndian.PutUint32(requestMessage[4:8], uint32(begin))
 		binary.BigEndian.PutUint32(requestMessage[8:], uint32(length))
 
@@ -280,9 +280,6 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 			fmt.Printf("Piece message not received! Received %v\n", messageType)
 			os.Exit(1)
 		}
-
-		// Print receives message
-		fmt.Printf("Recieved piece message: %v\n", responseMsg)
 
 		fmt.Printf("Recieved piece message\n")
 		if responseMsg == nil {

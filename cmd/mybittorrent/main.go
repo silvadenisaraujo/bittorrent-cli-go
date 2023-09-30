@@ -352,7 +352,7 @@ func sendMessage(conn *net.TCPConn, messageType MessageType, payload []byte) (in
 	messageLength := 4 + 1 + len(payload)
 	message := make([]byte, messageLength)
 	binary.BigEndian.PutUint32(message[0:4], uint32(len(payload)+1))
-	message[4] = byte(messageType)
+	message[4] = uint8(messageType)
 	copy(message[5:], payload)
 	fmt.Printf("[sendMessage] - Message: %v\n", message)
 	return conn.Write(message)

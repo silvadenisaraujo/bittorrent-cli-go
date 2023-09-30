@@ -297,7 +297,7 @@ func main() {
 		fmt.Printf("Num of Pieces: %d\n", piecesNum)
 		data := []byte{}
 
-		for i := 0; i < piecesNum; i++ {
+		for i := 0; i <= piecesNum; i++ {
 
 			fmt.Printf("Downloading piece %d\n", i)
 

@@ -230,6 +230,14 @@ func main() {
 
 func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]byte, error) {
 	pieceLength := int64(torrent.Info["piece length"].(int))
+	length := int64(torrent.Info["length"].(int))
+
+	if pieceIndex >= int(length/pieceLength) {
+		pieceLength = length - (pieceLength * int64(pieceIndex))
+	}
+
+	fmt.Printf("[requestPiece] - Piece Length: %d - Length: %d - Piece Index: %d\n", pieceLength, length, pieceIndex)
+
 	data := make([]byte, pieceLength)
 	lastBlockSize := pieceLength % BlockSize
 	piecesNum := (pieceLength - lastBlockSize) / BlockSize
@@ -248,7 +256,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 				length = BlockSize
 			}
 		}
-		fmt.Printf("[requestPiece] - Requesting block %d of %d (offset=%d, size=%d)\n", i, piecesNum-1, i, length)
+		fmt.Printf("[requestPiece] - Requesting block %d of %d (offset=%d, size=%d)\n", i, pieceLength, i, length)
 		requestMessage := make([]byte, 12)
 		binary.BigEndian.PutUint32(requestMessage[0:4], uint32(pieceIndex))
 		binary.BigEndian.PutUint32(requestMessage[4:8], uint32(i))

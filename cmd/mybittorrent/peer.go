@@ -16,7 +16,7 @@ type Peer struct {
 }
 
 const (
-	BlockSize int = 16 * 1024 // 16kb
+	BlockSize int64 = 16 * 1024 // 16kb
 )
 
 func getPeers(torrent *TorrentFile, peerId string) ([]Peer, error) {

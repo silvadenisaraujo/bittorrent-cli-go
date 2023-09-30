@@ -298,12 +298,18 @@ func main() {
 		data := []byte{}
 
 		for i := 0; i < piecesNum; i++ {
+
+			fmt.Printf("Downloading piece %d\n", i)
+
 			// Request piece
 			pieceData, err := requestPiece(torrent, conn, i)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
+
+			fmt.Printf("Downloaded piece %d\n", i)
+
 			// Write piece to file
 			data = append(data, pieceData...)
 		}
@@ -332,7 +338,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		pieceLength = length - (pieceLength * int64(pieceIndex))
 	}
 
-	fmt.Printf("[requestPiece] - Piece Length: %d - Length: %d - Piece Index: %d\n", pieceLength, length, pieceIndex)
+	// fmt.Printf("[requestPiece] - Piece Length: %d - Length: %d - Piece Index: %d\n", pieceLength, length, pieceIndex)
 
 	data := make([]byte, pieceLength)
 	lastBlockSize := pieceLength % BlockSize
@@ -341,7 +347,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		piecesNum++
 	}
 
-	fmt.Printf("[requestPiece] - Piece Length: %d # of Pieces: %d\n", pieceLength, piecesNum)
+	// fmt.Printf("[requestPiece] - Piece Length: %d # of Pieces: %d\n", pieceLength, piecesNum)
 
 	for i := int64(0); i < pieceLength; i += int64(BlockSize) {
 		length := BlockSize
@@ -352,7 +358,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 				length = BlockSize
 			}
 		}
-		fmt.Printf("[requestPiece] - Requesting block %d of %d (offset=%d, size=%d)\n", i, pieceLength, i, length)
+		// fmt.Printf("[requestPiece] - Requesting block %d of %d (offset=%d, size=%d)\n", i, pieceLength, i, length)
 		requestMessage := make([]byte, 12)
 		binary.BigEndian.PutUint32(requestMessage[0:4], uint32(pieceIndex))
 		binary.BigEndian.PutUint32(requestMessage[4:8], uint32(i))
@@ -368,7 +374,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 			os.Exit(1)
 		}
 
-		fmt.Printf("Recieved piece message\n")
+		// fmt.Printf("Recieved piece message\n")
 		if responseMsg == nil {
 			return data, nil
 		}
@@ -393,7 +399,7 @@ func sendMessage(conn *net.TCPConn, messageType MessageType, payload []byte) (in
 	binary.BigEndian.PutUint32(message[0:4], uint32(len(payload)+1))
 	message[4] = uint8(messageType)
 	copy(message[5:], payload)
-	fmt.Printf("[sendMessage] - Message: %v\n", message)
+	// fmt.Printf("[sendMessage] - Message: %v\n", message)
 	return conn.Write(message)
 }
 
@@ -401,12 +407,12 @@ func readMessage(conn *net.TCPConn) (MessageType, []byte) {
 
 	var messageLength uint32
 	binary.Read(conn, binary.BigEndian, &messageLength)
-	fmt.Printf("[readMessage] - Message length: %d\n", messageLength)
+	// fmt.Printf("[readMessage] - Message length: %d\n", messageLength)
 
 	var messageTypeByte byte
 	binary.Read(conn, binary.BigEndian, &messageTypeByte)
 	messageType := MessageType(messageTypeByte)
-	fmt.Printf("[readMessage] - Message type: %d\n", messageType)
+	// fmt.Printf("[readMessage] - Message type: %d\n", messageType)
 
 	if messageLength > 1 {
 		payload := make([]byte, messageLength-1)

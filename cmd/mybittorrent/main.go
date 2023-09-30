@@ -295,7 +295,7 @@ func main() {
 		// Dowload all pieces
 		piecesNum := int(torrent.Info["length"].(int) / torrent.Info["piece length"].(int))
 		fmt.Printf("Num of Pieces: %d\n", piecesNum)
-		data := make([]byte, torrent.Info["length"].(int))
+		data := []byte{}
 
 		for i := 0; i < piecesNum; i++ {
 			// Request piece
@@ -305,7 +305,7 @@ func main() {
 				return
 			}
 			// Write piece to file
-			copy(data[i*torrent.Info["piece length"].(int):], pieceData)
+			data = append(data, pieceData...)
 		}
 
 		file, err := os.Create(destFile)

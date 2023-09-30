@@ -260,10 +260,13 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		requestMessages[i] = requestMessage
 	}
 
+	// Print requests created
+	fmt.Printf("Request messages: %v\n", requestMessages)
+
 	for i, requestMessage := range requestMessages {
 
 		fmt.Printf("**********************************************\n")
-		fmt.Printf("Sending request: %d - requestMessage: %x\n", i, requestMessage)
+		fmt.Printf("Sending request: %d - requestMessage: %v\n", i, requestMessage)
 
 		_, err := sendMessage(conn, Request, requestMessage)
 		if err != nil {
@@ -272,24 +275,27 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 
 		// Read piece message
 		fmt.Printf("Waiting piece message\n")
-		messageType, payload := readMessage(conn)
+		messageType, responseMsg := readMessage(conn)
 		if messageType != Piece {
 			fmt.Printf("Piece message not received! Received %v\n", messageType)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Recieved piece message: %d\n", i)
-		if payload == nil {
+		// Print receives message
+		fmt.Printf("Recieved piece message: %v\n", responseMsg)
+
+		fmt.Printf("Recieved piece message\n")
+		if responseMsg == nil {
 			return data, nil
 		}
 
 		// Copy payload to data
-		index := binary.BigEndian.Uint32(payload[0:4])
+		index := binary.BigEndian.Uint32(responseMsg[0:4])
 		if uint32(pieceIndex) != index {
-			return nil, fmt.Errorf("expected piece index: %d, got=%d\n", pieceIndex, index)
+			return nil, fmt.Errorf("Expected piece index: %d, got=%d\n", pieceIndex, index)
 		}
-		begin := binary.BigEndian.Uint32(payload[4:8])
-		block := payload[8:]
+		begin := binary.BigEndian.Uint32(responseMsg[4:8])
+		block := responseMsg[8:]
 		copy(data[begin:], block)
 	}
 
@@ -351,7 +357,7 @@ func sendMessage(conn *net.TCPConn, messageType MessageType, payload []byte) (in
 	binary.BigEndian.PutUint32(message[0:4], uint32(len(payload)+1))
 	message[4] = byte(messageType)
 	copy(message[5:], payload)
-	fmt.Printf("[sendMessage] - Message: %x\n", message)
+	fmt.Printf("[sendMessage] - Message: %v\n", message)
 	return conn.Write(message)
 }
 

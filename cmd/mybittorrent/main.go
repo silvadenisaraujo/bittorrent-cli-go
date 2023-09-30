@@ -229,7 +229,7 @@ func main() {
 }
 
 func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]byte, error) {
-	pieceLength := torrent.Info["piece length"].(int64)
+	pieceLength := int64(torrent.Info["piece length"].(int))
 	data := make([]byte, pieceLength)
 	lastBlockSize := pieceLength % BlockSize
 	piecesNum := (pieceLength - lastBlockSize) / BlockSize

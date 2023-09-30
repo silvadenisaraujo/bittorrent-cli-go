@@ -251,13 +251,10 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		}
 
 		// Create the request message.
-		requestMessage := []byte{
-			byte(i),             // Index.
-			byte(begin >> 8),    // Begin, high byte.
-			byte(begin & 0xFF),  // Begin, low byte.
-			byte(length >> 8),   // Length, high byte.
-			byte(length & 0xFF), // Length, low byte.
-		}
+		requestMessage := make([]byte, 12)
+		binary.BigEndian.PutUint32(requestMessage[0:4], uint32(i))
+		binary.BigEndian.PutUint32(requestMessage[4:8], uint32(begin))
+		binary.BigEndian.PutUint32(requestMessage[8:], uint32(length))
 
 		// Add the request message to the slice.
 		requestMessages[i] = requestMessage

@@ -222,6 +222,102 @@ func main() {
 
 		fmt.Printf("Piece %d downloaded to %s\n", pieceIndex, destFile)
 
+	} else if command == "download" {
+		// Arguments
+		// Example: ./your_bittorrent.sh download_piece -o /tmp/test-piece-0 sample.torrent 0
+		destFile := os.Args[3]
+		torrentFile := os.Args[4]
+		fmt.Printf("Arguments - destFile: %s, torrentFile: %s\n", destFile, torrentFile)
+
+		// 	Read the torrent file to get the tracker URL
+		torrent, err := parse_file(torrentFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Perform the tracker GET request to get a list of peers
+		localPeerId, err := generatePeerId()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Local Peer ID: %s\n", localPeerId)
+
+		peers, err := getPeers(torrent, localPeerId)
+		fmt.Printf("Peers: %v\n", peers)
+
+		// Encodes and hash the info
+		infoHash, err := hashInfo(torrent)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Info Hash: %x\n", infoHash)
+
+		// Get random peer from the peers list
+		peer := peers[0]
+
+		// Do the handshake
+		handshakePeer, conn, err := handshakePeer(&peer, localPeerId, infoHash)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Handshake Peer: %s\n", handshakePeer)
+
+		defer conn.Close()
+
+		// Exchange multiple peer messages to download the file
+		// Wait for bitfield 5 message
+		messageType, _ := readMessage(conn)
+
+		if messageType != Bitfield {
+			fmt.Println("Bitfield message not received!")
+			os.Exit(1)
+		}
+
+		// Send interested message
+		interestedMessage := []byte{0, 0, 0, 1, 2}
+		_, err = conn.Write(interestedMessage)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		// Wait for unchoke message
+		messageType, _ = readMessage(conn)
+		if messageType != Unchoke {
+			fmt.Println("Unchoke message not received!")
+			os.Exit(1)
+		}
+
+		// Dowload all pieces
+		piecesNum := int(torrent.Info["length"].(int) / torrent.Info["piece length"].(int))
+		fmt.Printf("Num of Pieces: %d\n", piecesNum)
+		data := make([]byte, torrent.Info["length"].(int))
+
+		for i := 0; i < piecesNum; i++ {
+			// Request piece
+			pieceData, err := requestPiece(torrent, conn, i)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			// Write piece to file
+			copy(data[i*torrent.Info["piece length"].(int):], pieceData)
+		}
+
+		file, err := os.Create(destFile)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+		file.Write(data)
+
+		fmt.Printf("Downloaded %s to %s\n", torrentFile, destFile)
+
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)

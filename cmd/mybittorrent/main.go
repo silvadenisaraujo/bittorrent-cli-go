@@ -230,34 +230,45 @@ func main() {
 
 func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]byte, error) {
 	pieceLength := torrent.Info["piece length"].(int)
-	piecesNum := (pieceLength-1)/BlockSize + 1
+	data := make([]byte, pieceLength)
 	lastBlockSize := pieceLength % BlockSize
+	piecesNum := (pieceLength - lastBlockSize) / BlockSize
+	if lastBlockSize > 0 {
+		piecesNum++
+	}
+
 	fmt.Printf("[requestPiece] - Piece Length: %d # of Pieces: %d\n", pieceLength, piecesNum)
 
-	data := make([]byte, pieceLength)
-
+	requestMessages := make([][]byte, piecesNum)
 	for i := 0; i < piecesNum; i++ {
+		// Calculate the begin offset for the block.
+		begin := i * BlockSize
 
-		var blockLength int
-		if i == piecesNum-1 && lastBlockSize > 0 {
-			blockLength = lastBlockSize
-		} else {
-			blockLength = BlockSize
+		// Calculate the length of the block.
+		length := BlockSize
+		if i == piecesNum-1 {
+			length = pieceLength - begin
 		}
 
+		// Create the request message.
+		requestMessage := []byte{
+			byte(i),             // Index.
+			byte(begin >> 8),    // Begin, high byte.
+			byte(begin & 0xFF),  // Begin, low byte.
+			byte(length >> 8),   // Length, high byte.
+			byte(length & 0xFF), // Length, low byte.
+		}
+
+		// Add the request message to the slice.
+		requestMessages[i] = requestMessage
+	}
+
+	for i, requestMessage := range requestMessages {
+
 		fmt.Printf("**********************************************\n")
-		fmt.Printf("Requesting block %d of %d (offset=%d, size=%d)\n", i, piecesNum-1, i*BlockSize, blockLength)
+		fmt.Printf("Sending request: %d - requestMessage: %x\n", i, requestMessage)
 
-		// Create Payload
-		payload := make([]byte, 12)
-		binary.BigEndian.PutUint32(payload[0:4], uint32(pieceIndex))
-		binary.BigEndian.PutUint32(payload[4:8], uint32(i*BlockSize))
-		binary.BigEndian.PutUint32(payload[8:], uint32(blockLength))
-		fmt.Printf("Payload: %x\n", payload)
-
-		// Send request message
-		fmt.Printf("Sending request message, piece #%d\n", i)
-		_, err := sendMessage(conn, Request, payload)
+		_, err := sendMessage(conn, Request, requestMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -284,6 +295,55 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		block := payload[8:]
 		copy(data[begin:], block)
 	}
+
+	// for i := 0; i < piecesNum; i++ {
+
+	// 	var blockLength int
+	// 	if i == piecesNum-1 && lastBlockSize > 0 {
+	// 		blockLength = lastBlockSize
+	// 	} else {
+	// 		blockLength = BlockSize
+	// 	}
+
+	// 	fmt.Printf("**********************************************\n")
+	// 	fmt.Printf("Requesting block %d of %d (offset=%d, size=%d)\n", i, piecesNum-1, i*BlockSize, blockLength)
+
+	// 	// Create Payload
+	// 	payload := make([]byte, 12)
+	// 	binary.BigEndian.PutUint32(payload[0:4], uint32(pieceIndex))
+	// 	binary.BigEndian.PutUint32(payload[4:8], uint32(i*BlockSize))
+	// 	binary.BigEndian.PutUint32(payload[8:], uint32(blockLength))
+	// 	fmt.Printf("Payload: %x\n", payload)
+
+	// 	// Send request message
+	// 	fmt.Printf("Sending request message, piece #%d\n", i)
+	// 	_, err := sendMessage(conn, Request, payload)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// 	// Read piece message
+	// 	fmt.Printf("Waiting piece message\n")
+	// 	messageType, payload := readMessage(conn)
+	// 	if messageType != Piece {
+	// 		fmt.Printf("Piece message not received! Received %v\n", messageType)
+	// 		os.Exit(1)
+	// 	}
+
+	// 	fmt.Printf("Recieved piece message: %d\n", i)
+	// 	if payload == nil {
+	// 		return data, nil
+	// 	}
+
+	// 	// Copy payload to data
+	// 	index := binary.BigEndian.Uint32(payload[0:4])
+	// 	if uint32(pieceIndex) != index {
+	// 		return nil, fmt.Errorf("expected piece index: %d, got=%d\n", pieceIndex, index)
+	// 	}
+	// 	begin := binary.BigEndian.Uint32(payload[4:8])
+	// 	block := payload[8:]
+	// 	copy(data[begin:], block)
+	// }
 
 	return data, nil
 }

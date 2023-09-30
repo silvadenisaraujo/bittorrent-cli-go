@@ -178,6 +178,8 @@ func main() {
 		}
 		fmt.Printf("Handshake Peer: %s\n", handshakePeer)
 
+		defer conn.Close()
+
 		// Exchange multiple peer messages to download the file
 		// Wait for bitfield 5 message
 		messageType, _ := readMessage(conn)
@@ -218,7 +220,7 @@ func main() {
 		defer file.Close()
 		file.Write(pieceData)
 
-		fmt.Printf("Piece %d downloaded to \n", pieceIndex)
+		fmt.Printf("Piece %d downloaded to %s\n", pieceIndex, destFile)
 
 	} else {
 		fmt.Println("Unknown command: " + command)
@@ -229,6 +231,7 @@ func main() {
 func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]byte, error) {
 	pieceLength := torrent.Info["piece length"].(int)
 	piecesNum := (pieceLength-1)/BlockSize + 1
+	lastBlockSize := pieceLength % BlockSize
 	fmt.Printf("[requestPiece] - Piece Length: %d Pieces num: %d\n", pieceLength, piecesNum)
 
 	data := make([]byte, pieceLength)
@@ -237,10 +240,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 
 		var blockLength int
 		if i == piecesNum-1 {
-			blockLength = pieceLength % BlockSize
-			if blockLength == 0 {
-				blockLength = BlockSize
-			}
+			blockLength = lastBlockSize
 		} else {
 			blockLength = BlockSize
 		}
@@ -255,7 +255,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		fmt.Printf("Payload: %v\n", payload)
 
 		// Send request message
-		fmt.Printf("Sending request message, piece #%d\n", piecesNum)
+		fmt.Printf("Sending request message, piece #%d\n", i)
 		_, err := sendMessage(conn, Request, payload)
 		if err != nil {
 			return nil, err

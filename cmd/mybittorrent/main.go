@@ -232,7 +232,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 	pieceLength := torrent.Info["piece length"].(int)
 	piecesNum := (pieceLength-1)/BlockSize + 1
 	lastBlockSize := pieceLength % BlockSize
-	fmt.Printf("[requestPiece] - Piece Length: %d Pieces num: %d\n", pieceLength, piecesNum)
+	fmt.Printf("[requestPiece] - Piece Length: %d # of Pieces: %d\n", pieceLength, piecesNum)
 
 	data := make([]byte, pieceLength)
 
@@ -245,15 +245,15 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 			blockLength = BlockSize
 		}
 
+		fmt.Printf("**********************************************\n")
 		fmt.Printf("Requesting block %d of %d (offset=%d, size=%d)\n", i, piecesNum-1, i*BlockSize, blockLength)
-		// Requesting block 15 of 15 (offset=245760, size=0)
 
 		// Create Payload
 		payload := make([]byte, 12)
 		binary.BigEndian.PutUint32(payload[0:4], uint32(pieceIndex))
 		binary.BigEndian.PutUint32(payload[4:8], uint32(i*BlockSize))
 		binary.BigEndian.PutUint32(payload[8:], uint32(blockLength))
-		fmt.Printf("Payload: %v\n", payload)
+		fmt.Printf("Payload: %x\n", payload)
 
 		// Send request message
 		fmt.Printf("Sending request message, piece #%d\n", i)
@@ -294,24 +294,24 @@ func sendMessage(conn *net.TCPConn, messageType MessageType, payload []byte) (in
 	binary.BigEndian.PutUint32(message[0:4], uint32(len(payload)+1))
 	message[4] = byte(messageType)
 	copy(message[5:], payload)
-	fmt.Printf("[sendMessage] - Message: %s\n", string(message))
+	fmt.Printf("[sendMessage] - Message: %x\n", message)
 	return conn.Write(message)
 }
 
 func readMessage(conn *net.TCPConn) (MessageType, []byte) {
-	messageLengthBytes := make([]byte, 4)
-	io.ReadAtLeast(conn, messageLengthBytes, 4)
-	messageLength := binary.BigEndian.Uint32(messageLengthBytes)
+
+	var messageLength uint32
+	binary.Read(conn, binary.BigEndian, &messageLength)
 	fmt.Printf("[readMessage] - Message length: %d\n", messageLength)
 
-	messageTypeBytes := make([]byte, 1)
-	io.ReadAtLeast(conn, messageTypeBytes, 1)
-	messageType := MessageType(messageTypeBytes[0])
+	var messageTypeByte byte
+	binary.Read(conn, binary.BigEndian, &messageTypeByte)
+	messageType := MessageType(messageTypeByte)
 	fmt.Printf("[readMessage] - Message type: %d\n", messageType)
 
 	if messageLength > 1 {
 		payload := make([]byte, messageLength-1)
-		io.ReadAtLeast(conn, payload, int(messageLength-1))
+		io.ReadAtLeast(conn, payload, len(payload))
 		return messageType, payload
 	}
 	return messageType, nil

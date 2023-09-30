@@ -308,7 +308,7 @@ func main() {
 				return
 			}
 
-			fmt.Printf("Downloaded piece %d\n", i)
+			fmt.Printf("Downloaded piece %d length: %d\n", i, len(pieceData))
 
 			// Write piece to file
 			data = append(data, pieceData...)

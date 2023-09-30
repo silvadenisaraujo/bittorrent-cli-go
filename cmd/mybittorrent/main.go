@@ -289,7 +289,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 }
 
 func sendMessage(conn *net.TCPConn, messageType MessageType, payload []byte) (int, error) {
-	messageLength := 4 + 1 + len(payload)
+	messageLength := 4 + 1 + len(payload) + 1
 	message := make([]byte, messageLength)
 	binary.BigEndian.PutUint32(message[0:4], uint32(messageLength))
 	message[4] = byte(messageType)

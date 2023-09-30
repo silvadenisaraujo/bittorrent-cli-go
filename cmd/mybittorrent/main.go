@@ -239,13 +239,14 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 	for i := 0; i < piecesNum; i++ {
 
 		var blockLength int
-		if i == piecesNum-1 {
+		if i == piecesNum-1 && lastBlockSize > 0 {
 			blockLength = lastBlockSize
 		} else {
 			blockLength = BlockSize
 		}
 
 		fmt.Printf("Requesting block %d of %d (offset=%d, size=%d)\n", i, piecesNum-1, i*BlockSize, blockLength)
+		// Requesting block 15 of 15 (offset=245760, size=0)
 
 		// Create Payload
 		payload := make([]byte, 12)

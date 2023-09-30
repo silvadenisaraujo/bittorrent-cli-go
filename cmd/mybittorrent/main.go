@@ -294,7 +294,7 @@ func sendMessage(conn *net.TCPConn, messageType MessageType, payload []byte) (in
 	binary.BigEndian.PutUint32(message[0:4], uint32(len(payload)+1))
 	message[4] = byte(messageType)
 	copy(message[5:], payload)
-	fmt.Printf("[sendMessage] - Message: %v\n", message)
+	fmt.Printf("[sendMessage] - Message: %s\n", string(message))
 	return conn.Write(message)
 }
 

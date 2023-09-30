@@ -218,7 +218,7 @@ func main() {
 		defer file.Close()
 		file.Write(pieceData)
 
-		fmt.Printf("Piece %d downloaded to %s\n", pieceIndex, destFile)
+		fmt.Printf("Piece %d downloaded to \n", pieceIndex)
 
 	} else {
 		fmt.Println("Unknown command: " + command)
@@ -255,7 +255,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		fmt.Printf("Payload: %v\n", payload)
 
 		// Send request message
-		fmt.Printf("Sending request message, piece #%d", piecesNum)
+		fmt.Printf("Sending request message, piece #%d\n", piecesNum)
 		_, err := sendMessage(conn, Request, payload)
 		if err != nil {
 			return nil, err
@@ -269,7 +269,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 			os.Exit(1)
 		}
 
-		fmt.Println(i, "Recieved piece message")
+		fmt.Printf("Recieved piece message: %d\n", i)
 		if payload == nil {
 			return data, nil
 		}
@@ -277,7 +277,7 @@ func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]by
 		// Copy payload to data
 		index := binary.BigEndian.Uint32(payload[0:4])
 		if uint32(pieceIndex) != index {
-			return nil, fmt.Errorf("expected piece index: %d, got=%d", pieceIndex, index)
+			return nil, fmt.Errorf("expected piece index: %d, got=%d\n", pieceIndex, index)
 		}
 		begin := binary.BigEndian.Uint32(payload[4:8])
 		block := payload[8:]

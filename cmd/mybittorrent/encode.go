@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"sort"
 	"strconv"
@@ -26,6 +25,21 @@ func encodeBencodeList(value interface{}) (string, error) {
 
 	for _, value := range value.([]interface{}) {
 		encodedValue, _ := encodeBencode(value)
+		encodedList += encodedValue
+	}
+
+	encodedList += "e"
+
+	return encodedList, err
+}
+
+// Encodes a Bencode list of strings
+func encodeBencodeStrList(value []string) (string, error) {
+	var encodedList string = "l"
+	var err error
+
+	for _, value := range value {
+		encodedValue, _ := encodeBencodeString(value)
 		encodedList += encodedValue
 	}
 
@@ -82,22 +96,11 @@ func encodeBencode(value interface{}) (string, error) {
 		return encodeBencodeInteger(value)
 	case []interface{}:
 		return encodeBencodeList(value)
+	case []string:
+		return encodeBencodeStrList(value.([]string)) // assert type to []string
 	case map[string]interface{}:
 		return encodeBencodeDictionary(value)
 	default:
 		return "", fmt.Errorf("Type not recognized %T", value)
 	}
-}
-
-// Hashes the info dictionary
-func hashInfo(torrent *TorrentFile) ([]byte, error) {
-	encodedInfo, err := encodeBencode(torrent.Info)
-	if err != nil {
-		return nil, err
-	}
-
-	sha := sha1.New()
-	sha.Write([]byte(encodedInfo))
-	infoHash := sha.Sum(nil)
-	return infoHash, nil
 }

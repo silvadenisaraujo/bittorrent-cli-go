@@ -28,17 +28,14 @@ func getPeers(torrent *TorrentFile, peerId string) ([]Peer, error) {
 		return nil, err
 	}
 
-	// Encodes and hash the info
-	infoHash, err := hashInfo(torrent)
-
 	// Add the query parameters
 	q := req.URL.Query()
-	q.Add("info_hash", string(infoHash))
+	q.Add("info_hash", string(torrent.InfoHash))
 	q.Add("peer_id", peerId)
 	q.Add("port", "6881")
 	q.Add("uploaded", "0")
 	q.Add("downloaded", "0")
-	q.Add("left", fmt.Sprint(torrent.Info["length"].(int)))
+	q.Add("left", fmt.Sprint(torrent.Info.Length))
 	q.Add("compact", "1")
 	req.URL.RawQuery = q.Encode()
 
@@ -105,4 +102,26 @@ func handshakePeer(peer *Peer, localPeerId string, infoHash []byte) (string, *ne
 	}
 	replyPeerId := reply[1+19+8+20:]
 	return hex.EncodeToString(replyPeerId), conn, nil
+}
+
+// Generates a Peer ID based on MAC address max 20 characters
+func generatePeerId() (string, error) {
+
+	// Get MAC address
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	// Get the first MAC address
+	var macAddress string
+	for _, i := range interfaces {
+		if i.HardwareAddr.String() != "" {
+			macAddress = i.HardwareAddr.String()
+			break
+		}
+	}
+
+	// Generate Peer ID with 20 bytes
+	return macAddress[:20], nil
 }

@@ -78,8 +78,6 @@ func decodeBencodeDictionary(bencodedString string) (interface{}, int, error) {
 	var decodedDictionary map[string]interface{} = make(map[string]interface{})
 	var dictionaryLen int = len(bencodedString)
 
-	// fmt.Println("To decode dictionary=", bencodedPayload)
-
 	// Remove the first (d) and last character (e)
 	bencodedPayload := bencodedString[1 : dictionaryLen-1]
 

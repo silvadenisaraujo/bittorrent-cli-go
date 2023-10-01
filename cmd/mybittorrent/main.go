@@ -32,10 +32,10 @@ func main() {
 	if command == "decode" {
 		bencodedValue := os.Args[2]
 
-		decoded, _, err := decodeBencode(bencodedValue)
+		decoded, err := decodeValue(bencodedValue)
 		if err != nil {
 			fmt.Println(err)
-			return
+			os.Exit(1)
 		}
 
 		jsonOutput, _ := json.Marshal(decoded)
@@ -43,38 +43,22 @@ func main() {
 	} else if command == "info" {
 
 		torrentFile := os.Args[2]
-		torrent, err := parse_file(torrentFile)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-
-		// Encodes and hash the info
-		infoHash, err := hashInfo(torrent)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		torrent := ParseFile(torrentFile)
 
 		// Print the tracker URL and the file length
 		fmt.Println("Tracker URL:", torrent.Announce)
-		fmt.Println("Length:", torrent.Info["length"].(int))
-		fmt.Printf("Info Hash: %x\n", infoHash)
+		fmt.Println("Length:", torrent.Info.Length)
+		fmt.Printf("Info Hash: %x\n", torrent.InfoHash)
 
 		// Print the pieces
-		fmt.Printf("Piece Length: %d\n", torrent.Info["piece length"].(int))
+		fmt.Printf("Piece Length: %d\n", torrent.Info.PieceLen)
 		fmt.Println("Piece Hashes:")
-		pieces := torrent.Info["pieces"].(string)
-		for i := 0; i < len(pieces); i += 20 {
-			fmt.Printf("%x\n", pieces[i:i+20])
+		for _, piece := range torrent.Info.Pieces {
+			fmt.Printf("%x\n", piece)
 		}
 	} else if command == "peers" {
 		torrentFile := os.Args[2]
-		torrent, err := parse_file(torrentFile)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		torrent := ParseFile(torrentFile)
 
 		// Get the peer ID
 		peerId, err := generatePeerId()
@@ -99,11 +83,7 @@ func main() {
 		torrentFile := os.Args[2]
 		peerStr := os.Args[3]
 
-		torrent, err := parse_file(torrentFile)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		torrent := ParseFile(torrentFile)
 
 		// Get the peer ID
 		peer, err := parsePeer(peerStr)
@@ -115,11 +95,8 @@ func main() {
 		// Get the local peer ID
 		localPeerId, err := generatePeerId()
 
-		// Encodes and hash the info
-		infoHash, err := hashInfo(torrent)
-
 		// Do the handshake
-		handshakePeer, _, err := handshakePeer(peer, localPeerId, infoHash)
+		handshakePeer, _, err := handshakePeer(peer, localPeerId, []byte(torrent.InfoHash))
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -142,11 +119,7 @@ func main() {
 		fmt.Printf("Arguments - destFile: %s, torrentFile: %s, pieceIndex: %d\n", destFile, torrentFile, pieceIndex)
 
 		// 	Read the torrent file to get the tracker URL
-		torrent, err := parse_file(torrentFile)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		torrent := ParseFile(torrentFile)
 
 		// Perform the tracker GET request to get a list of peers
 		localPeerId, err := generatePeerId()
@@ -160,18 +133,13 @@ func main() {
 		fmt.Printf("Peers: %v\n", peers)
 
 		// Encodes and hash the info
-		infoHash, err := hashInfo(torrent)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Printf("Info Hash: %x\n", infoHash)
+		fmt.Printf("Info Hash: %x\n", torrent.InfoHash)
 
 		// Get random peer from the peers list
 		peer := peers[0]
 
 		// Do the handshake
-		handshakePeer, conn, err := handshakePeer(&peer, localPeerId, infoHash)
+		handshakePeer, conn, err := handshakePeer(&peer, localPeerId, torrent.InfoHash)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -230,11 +198,7 @@ func main() {
 		fmt.Printf("Arguments - destFile: %s, torrentFile: %s\n", destFile, torrentFile)
 
 		// 	Read the torrent file to get the tracker URL
-		torrent, err := parse_file(torrentFile)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
+		torrent := ParseFile(torrentFile)
 
 		// Perform the tracker GET request to get a list of peers
 		localPeerId, err := generatePeerId()
@@ -248,18 +212,13 @@ func main() {
 		fmt.Printf("Peers: %v\n", peers)
 
 		// Encodes and hash the info
-		infoHash, err := hashInfo(torrent)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Printf("Info Hash: %x\n", infoHash)
+		fmt.Printf("Info Hash: %x\n", torrent.InfoHash)
 
 		// Get random peer from the peers list
 		peer := peers[0]
 
 		// Do the handshake
-		handshakePeer, conn, err := handshakePeer(&peer, localPeerId, infoHash)
+		handshakePeer, conn, err := handshakePeer(&peer, localPeerId, torrent.InfoHash)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -293,7 +252,7 @@ func main() {
 		}
 
 		// Dowload all pieces
-		piecesNum := int(torrent.Info["length"].(int) / torrent.Info["piece length"].(int))
+		piecesNum := int(torrent.Info.Length / torrent.Info.PieceLen)
 		fmt.Printf("Num of Pieces: %d\n", piecesNum)
 		data := []byte{}
 
@@ -331,8 +290,8 @@ func main() {
 }
 
 func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]byte, error) {
-	pieceLength := int64(torrent.Info["piece length"].(int))
-	length := int64(torrent.Info["length"].(int))
+	pieceLength := int64(torrent.Info.PieceLen)
+	length := int64(torrent.Info.Length)
 
 	if pieceIndex >= int(length/pieceLength) {
 		pieceLength = length - (pieceLength * int64(pieceIndex))

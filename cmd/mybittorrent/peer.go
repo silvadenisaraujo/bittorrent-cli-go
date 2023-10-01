@@ -123,5 +123,6 @@ func generatePeerId() (string, error) {
 	}
 
 	// Generate Peer ID with 20 bytes
-	return macAddress[:20], nil
+	peerId := "LOCAL-ID-" + macAddress
+	return peerId[:20], nil
 }

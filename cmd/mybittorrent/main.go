@@ -56,6 +56,7 @@ func main() {
 		for _, piece := range torrent.Info.Pieces {
 			fmt.Printf("%x\n", piece)
 		}
+
 	} else if command == "peers" {
 		torrentFile := os.Args[2]
 		torrent := ParseFile(torrentFile)
@@ -96,7 +97,7 @@ func main() {
 		localPeerId, err := generatePeerId()
 
 		// Do the handshake
-		handshakePeer, _, err := handshakePeer(peer, localPeerId, []byte(torrent.InfoHash))
+		handshakePeer, _, err := handshakePeer(peer, localPeerId, torrent.InfoHash)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -139,7 +140,7 @@ func main() {
 		peer := peers[0]
 
 		// Do the handshake
-		handshakePeer, conn, err := handshakePeer(&peer, localPeerId, torrent.InfoHash)
+		handshakePeer, conn, err := handshakePeer(&peer, localPeerId, []byte(torrent.InfoHash))
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -80,8 +80,8 @@ func parseFile(filepath string) (*TorrentFile, error) {
 		Pieces:   pieces,
 	}
 
-	// Has info
-	infoHash, err := info.Hash()
+	// Hash info
+	infoHash, err := hashInfo(infoDecoded)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -97,8 +97,8 @@ func parseFile(filepath string) (*TorrentFile, error) {
 }
 
 // Hashes the info dictionary
-func (info *Info) Hash() ([]byte, error) {
-	encodedInfo, err := encodeBencode(info.MapToDict())
+func hashInfo(infoDecoded map[string]interface{}) ([]byte, error) {
+	encodedInfo, err := encodeBencode(infoDecoded)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +106,4 @@ func (info *Info) Hash() ([]byte, error) {
 	sha.Write([]byte(encodedInfo))
 	infoHash := sha.Sum(nil)
 	return infoHash, nil
-}
-
-// Maps the Info struct to a dictionary
-func (info *Info) MapToDict() map[string]interface{} {
-	dict := make(map[string]interface{})
-	dict["length"] = info.Length
-	dict["name"] = info.Name
-	dict["piece length"] = info.PieceLen
-	dict["pieces"] = info.Pieces
-	return dict
 }

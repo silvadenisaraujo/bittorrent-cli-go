@@ -11,6 +11,7 @@ type TorrentFile struct {
 	Announce string
 	Info     Info
 	InfoHash []byte
+	Path     string
 }
 
 type Info struct {
@@ -91,6 +92,7 @@ func parseFile(filepath string) (*TorrentFile, error) {
 		Announce: announce,
 		Info:     info,
 		InfoHash: infoHash,
+		Path:     filepath,
 	}
 
 	return &torrent, nil

@@ -105,7 +105,7 @@ func handshakePeer(peer *Peer, localPeerId string, infoHash []byte) (string, *ne
 }
 
 // Generates a Peer ID based on MAC address max 20 characters
-func generatePeerId() (string, error) {
+func getLocalId() (string, error) {
 
 	// Get MAC address
 	interfaces, err := net.Interfaces()

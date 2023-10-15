@@ -15,21 +15,21 @@ func main() {
 		// Example: ./your_bittorrent.sh decode 4:spam
 		bencodedValue := os.Args[2]
 
-		printDecodeValue(bencodedValue)
+		PrintDecodeValue(bencodedValue)
 	} else if command == "info" {
 		// Example: ./your_bittorrent.sh info sample.torrent
 		torrentFile := os.Args[2]
 
 		torrent := ParseFile(torrentFile)
 
-		printFileInfo(torrent)
+		PrintFileInfo(torrent)
 	} else if command == "peers" {
 		// Example: ./your_bittorrent.sh peers sample.torrent
 		torrentFile := os.Args[2]
 
 		torrent := ParseFile(torrentFile)
 
-		printPeers(torrent)
+		PrintPeers(torrent)
 	} else if command == "handshake" {
 		// Example: ./your_bittorrent.sh handshake sample.torrent PEER_ID
 		torrentFile := os.Args[2]
@@ -38,13 +38,13 @@ func main() {
 		torrent := ParseFile(torrentFile)
 
 		// Get the peer ID
-		peer, err := parsePeer(peerStr)
+		peer, err := ParsePeerFromStr(peerStr)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
-		doPeerHandshake(torrent, peer)
+		DoPeerHandshake(torrent, peer)
 	} else if command == "download_piece" {
 		// Example: ./your_bittorrent.sh download_piece -o /tmp/test-piece-0 sample.torrent 0
 		destFile := os.Args[3]
@@ -59,7 +59,7 @@ func main() {
 		torrent := ParseFile(torrentFile)
 
 		// Download piece from the torrent
-		downloadPiece(destFile, torrent, pieceIndex)
+		DownloadPiece(destFile, torrent, pieceIndex)
 
 	} else if command == "download" {
 		// Example: ./your_bittorrent.sh download_piece -o /tmp/test-piece-0 sample.torrent 0
@@ -70,7 +70,7 @@ func main() {
 		torrent := ParseFile(torrentFile)
 
 		// Download the file
-		download(destFile, torrent)
+		Download(destFile, torrent)
 	} else {
 		fmt.Println("Unknown command: " + command)
 		os.Exit(1)

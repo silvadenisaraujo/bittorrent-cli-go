@@ -1,30 +1,13 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
 	"os"
 )
 
-type MessageType int
-
-const (
-	Choke MessageType = iota
-	Unchoke
-	Interested
-	NotInterested
-	Have
-	Bitfield
-	Request
-	Piece
-	Cancel
-)
-
 // Decodes a bencoded value
-func printDecodeValue(bencodedValue string) {
+func PrintDecodeValue(bencodedValue string) {
 	decoded, _, err := decodeBencode(bencodedValue)
 	if err != nil {
 		fmt.Println(err)
@@ -36,7 +19,7 @@ func printDecodeValue(bencodedValue string) {
 }
 
 // Prints the information about the torrent file
-func printFileInfo(torrent *TorrentFile) {
+func PrintFileInfo(torrent *TorrentFile) {
 	// Print the tracker URL and the file length
 	fmt.Println("Tracker URL:", torrent.Announce)
 	fmt.Println("Length:", torrent.Info.Length)
@@ -51,17 +34,10 @@ func printFileInfo(torrent *TorrentFile) {
 }
 
 // Prints the peers for the torrent file
-func printPeers(torrent *TorrentFile) {
+func PrintPeers(torrent *TorrentFile) {
 
-	// Get the peer ID
-	peerId, err := getLocalId()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// Do HTTP GET request to the tracker
-	peers, err := getPeers(torrent, peerId)
+	// Do HTTP GET request to the available peers
+	peers, err := RequestPeers(torrent)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -74,35 +50,23 @@ func printPeers(torrent *TorrentFile) {
 }
 
 // Does the handshake with a peer and print the peer ID
-func doPeerHandshake(torrent *TorrentFile, peer *Peer) {
-	// Get the peer ID
-	localId, err := getLocalId()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+func DoPeerHandshake(torrent *TorrentFile, peer *Peer) {
 
 	// Do the handshake
-	handshakedPeer, _, err := handshakePeer(peer, localId, torrent.InfoHash)
+	peerConnection, err := peer.Handshake(torrent.InfoHash)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Print the handshake
-	fmt.Println("Peer ID:", handshakedPeer)
+	fmt.Println("Peer ID:", peerConnection.PeerId)
 }
 
 // Downloads a piece from a peer and print the piece hash
-func downloadPiece(destFile string, torrent *TorrentFile, pieceIndex int) {
-	localPeerId, err := getLocalId()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Printf("Local Peer ID: %s\n", localPeerId)
+func DownloadPiece(destFile string, torrent *TorrentFile, pieceIndex int) {
 
-	peers, err := getPeers(torrent, localPeerId)
+	peers, err := RequestPeers(torrent)
 	fmt.Printf("Peers: %v\n", peers)
 
 	// Encodes and hash the info
@@ -112,18 +76,18 @@ func downloadPiece(destFile string, torrent *TorrentFile, pieceIndex int) {
 	peer := peers[0]
 
 	// Do the handshake
-	handshakePeer, conn, err := handshakePeer(&peer, localPeerId, []byte(torrent.InfoHash))
+	peerConnection, err := peer.Handshake(torrent.InfoHash)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("Handshake Peer: %s\n", handshakePeer)
+	fmt.Printf("Handshake Peer: %s\n", peerConnection.PeerId)
 
-	defer conn.Close()
+	defer peerConnection.Conn.Close()
 
 	// Exchange multiple peer messages to download the file
 	// Wait for bitfield 5 message
-	messageType, _ := readMessage(conn)
+	messageType, _ := peerConnection.readMessage()
 
 	if messageType != Bitfield {
 		fmt.Println("Bitfield message not received!")
@@ -132,21 +96,21 @@ func downloadPiece(destFile string, torrent *TorrentFile, pieceIndex int) {
 
 	// Send interested message
 	interestedMessage := []byte{0, 0, 0, 1, 2}
-	_, err = conn.Write(interestedMessage)
+	_, err = peerConnection.Conn.Write(interestedMessage)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Wait for unchoke message
-	messageType, _ = readMessage(conn)
+	messageType, _ = peerConnection.readMessage()
 	if messageType != Unchoke {
 		fmt.Println("Unchoke message not received!")
 		os.Exit(1)
 	}
 
 	// Request piece
-	pieceData, err := requestPiece(torrent, conn, pieceIndex)
+	pieceData, err := peerConnection.RequestPiece(int64(torrent.Info.PieceLen), pieceIndex, int64(torrent.Info.Length))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -165,16 +129,9 @@ func downloadPiece(destFile string, torrent *TorrentFile, pieceIndex int) {
 }
 
 // Downloads the file from a peer and print the file hash
-func download(destFile string, torrent *TorrentFile) {
-	// Perform the tracker GET request to get a list of peers
-	localPeerId, err := getLocalId()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Printf("Local Peer ID: %s\n", localPeerId)
+func Download(destFile string, torrent *TorrentFile) {
 
-	peers, err := getPeers(torrent, localPeerId)
+	peers, err := RequestPeers(torrent)
 	fmt.Printf("Peers: %v\n", peers)
 
 	// Encodes and hash the info
@@ -184,18 +141,18 @@ func download(destFile string, torrent *TorrentFile) {
 	peer := peers[0]
 
 	// Do the handshake
-	handshakePeer, conn, err := handshakePeer(&peer, localPeerId, torrent.InfoHash)
+	peerConnection, err := peer.Handshake(torrent.InfoHash)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("Handshake Peer: %s\n", handshakePeer)
+	fmt.Printf("Handshake Peer: %s\n", peerConnection.PeerId)
 
-	defer conn.Close()
+	defer peerConnection.Conn.Close()
 
 	// Exchange multiple peer messages to download the file
 	// Wait for bitfield 5 message
-	messageType, _ := readMessage(conn)
+	messageType, _ := peerConnection.readMessage()
 
 	if messageType != Bitfield {
 		fmt.Println("Bitfield message not received!")
@@ -204,14 +161,14 @@ func download(destFile string, torrent *TorrentFile) {
 
 	// Send interested message
 	interestedMessage := []byte{0, 0, 0, 1, 2}
-	_, err = conn.Write(interestedMessage)
+	_, err = peerConnection.Conn.Write(interestedMessage)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// Wait for unchoke message
-	messageType, _ = readMessage(conn)
+	messageType, _ = peerConnection.readMessage()
 	if messageType != Unchoke {
 		fmt.Println("Unchoke message not received!")
 		os.Exit(1)
@@ -227,7 +184,7 @@ func download(destFile string, torrent *TorrentFile) {
 		fmt.Printf("Downloading piece %d\n", i)
 
 		// Request piece
-		pieceData, err := requestPiece(torrent, conn, i)
+		pieceData, err := peerConnection.RequestPiece(int64(torrent.Info.PieceLen), i, int64(torrent.Info.Length))
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -248,90 +205,4 @@ func download(destFile string, torrent *TorrentFile) {
 	file.Write(data)
 
 	fmt.Printf("Downloaded %s to %s\n", torrent.Path, destFile)
-}
-
-// Request a piece from a peer
-func requestPiece(torrent *TorrentFile, conn *net.TCPConn, pieceIndex int) ([]byte, error) {
-	pieceLength := int64(torrent.Info.PieceLen)
-	length := int64(torrent.Info.Length)
-
-	if pieceIndex >= int(length/pieceLength) {
-		pieceLength = length - (pieceLength * int64(pieceIndex))
-	}
-
-	data := make([]byte, pieceLength)
-	lastBlockSize := pieceLength % BlockSize
-	piecesNum := (pieceLength - lastBlockSize) / BlockSize
-	if lastBlockSize > 0 {
-		piecesNum++
-	}
-
-	for i := int64(0); i < pieceLength; i += int64(BlockSize) {
-		length := BlockSize
-		if i+int64(BlockSize) > pieceLength {
-			fmt.Printf("reached last block, changing size to %d\n", lastBlockSize)
-			length = pieceLength - i
-			if length > BlockSize {
-				length = BlockSize
-			}
-		}
-		requestMessage := make([]byte, 12)
-		binary.BigEndian.PutUint32(requestMessage[0:4], uint32(pieceIndex))
-		binary.BigEndian.PutUint32(requestMessage[4:8], uint32(i))
-		binary.BigEndian.PutUint32(requestMessage[8:], uint32(length))
-		_, err := sendMessage(conn, Request, requestMessage)
-		if err != nil {
-			return nil, err
-		}
-
-		messageType, responseMsg := readMessage(conn)
-		if messageType != Piece {
-			fmt.Printf("Piece message not received! Received %v\n", messageType)
-			os.Exit(1)
-		}
-
-		if responseMsg == nil {
-			return data, nil
-		}
-
-		// Copy payload to data
-		index := binary.BigEndian.Uint32(responseMsg[0:4])
-		if uint32(pieceIndex) != index {
-			return nil, fmt.Errorf("Expected piece index: %d, got=%d\n", pieceIndex, index)
-		}
-		begin := binary.BigEndian.Uint32(responseMsg[4:8])
-		block := responseMsg[8:]
-		copy(data[begin:], block)
-
-	}
-
-	return data, nil
-}
-
-// Sends a TCP message according to the protocol
-func sendMessage(conn *net.TCPConn, messageType MessageType, payload []byte) (int, error) {
-	messageLength := 4 + 1 + len(payload)
-	message := make([]byte, messageLength)
-	binary.BigEndian.PutUint32(message[0:4], uint32(len(payload)+1))
-	message[4] = uint8(messageType)
-	copy(message[5:], payload)
-	return conn.Write(message)
-}
-
-// Reads a TCP message according to the protocol
-func readMessage(conn *net.TCPConn) (MessageType, []byte) {
-
-	var messageLength uint32
-	binary.Read(conn, binary.BigEndian, &messageLength)
-
-	var messageTypeByte byte
-	binary.Read(conn, binary.BigEndian, &messageTypeByte)
-	messageType := MessageType(messageTypeByte)
-
-	if messageLength > 1 {
-		payload := make([]byte, messageLength-1)
-		io.ReadAtLeast(conn, payload, len(payload))
-		return messageType, payload
-	}
-	return messageType, nil
 }
